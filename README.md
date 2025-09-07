@@ -32,13 +32,6 @@ Open your CMake file in a **GUI** and edit common parts (version, project meta, 
 - **Explorer & editor context menu**  
   Quick access to the GUI from the file tree, the editor title, and the editor context menu.
 
-> _Screenshots/GIFs_  
-> `images/open-visual.gif` – opening a file in the GUI  
-> `images/edit-deps.gif` – editing dependencies and applying changes  
-> `images/diff-apply.gif` – diff view with clean apply/cancel
->
-> Add these to your repo and reference them here.
-
 ---
 
 ## Getting started
