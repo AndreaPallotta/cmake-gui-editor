@@ -3,6 +3,15 @@
   "displayName": "cmake-gui-editor",
   "description": "GUI-based editor for cmake and cmakelists files",
   "version": "0.0.1",
+  "author": {
+    "name": "Andrea Pallotta",
+    "url": "https://github.com/AndreaPallotta"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AndreaPallotta/cmake-gui-editor.git"
+  },
+  "publisher": "AndreaPallotta",
   "engines": {
     "vscode": "^1.103.0"
   },
