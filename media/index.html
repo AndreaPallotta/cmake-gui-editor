@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; img-src ${cspSource} https: data:;
+                 script-src ${cspSource}; style-src ${cspSource} 'unsafe-inline';">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CMake GUI (Visual)</title>
+  <style>
+    body{font-family: var(--vscode-font-family); font-size: 13px; margin:0;}
+    header{display:flex; align-items:center; gap:.5rem; padding:.5rem .75rem; border-bottom:1px solid var(--vscode-editorGroup-border);}
+    main{display:grid; grid-template-columns: 280px 1fr 1fr; gap:12px; padding:12px;}
+    .card{border:1px solid var(--vscode-editorGroup-border); border-radius:6px; padding:8px;}
+    h3{margin:.2rem 0 .6rem 0; font-size: 12px; text-transform: uppercase; opacity:.7;}
+    input, textarea, select{width:100%;}
+    textarea{height:110px;}
+    #apply{margin-left:auto;}
+    code{white-space:pre;}
+  </style>
+</head>
+<body>
+  <header>
+    <strong>CMake GUI (Visual)</strong>
+    <select id="targetSelect"></select>
+    <button id="apply">Apply</button>
+  </header>
+  <main>
+    <section class="card">
+      <h3>Project</h3>
+      <label>Name <input id="projName" placeholder="MyProject"/></label><br/>
+      <label>min CMake <input id="minCMake" placeholder="3.21"/></label><br/>
+      <label>C++ Standard
+        <select id="cxxStd">
+          <option>11</option><option>14</option><option>17</option><option>20</option><option>23</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="card">
+      <h3>Target Dependencies</h3>
+      <label>Target <span id="targetName"></span></label><br/>
+      <label>Libraries (one per line)
+        <textarea id="linkLibs" placeholder="Qt6::Widgets&#10;fmt::fmt"></textarea>
+      </label>
+    </section>
+
+    <section class="card">
+      <h3>Unsupported / Unparsed (read-only)</h3>
+      <pre><code id="unsupported"></code></pre>
+    </section>
+  </main>
+  <script src="${appJs}"></script>
+</body>
+</html>

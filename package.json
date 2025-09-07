@@ -1,0 +1,98 @@
+{
+  "name": "cmake-gui-editor",
+  "displayName": "cmake-gui-editor",
+  "description": "GUI-based editor for cmake and cmakelists files",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.103.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:cmake"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cmake-gui-editor.openVisual",
+        "title": "CMake GUI: Open Visual Editor"
+      },
+      {
+        "command": "cmake-gui-editor.insertManagedRegion",
+        "title": "CMake GUI: Insert Managed Region"
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "cmake-gui-editor.visualEditor",
+        "displayName": "CMake GUI (Visual)",
+        "selector": [
+          {
+            "filenamePattern": "**/CMakeLists.txt"
+          },
+          {
+            "filenamePattern": "**/*.cmake"
+          }
+        ],
+        "priority": "option"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "cmake-gui-editor.openVisual",
+          "group": "2_open@10",
+          "when": "resourceFilename == CMakeLists.txt || resourceExtname == .cmake || resourceLangId == cmake"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "cmake-gui-editor.openVisual",
+          "group": "navigation@2",
+          "when": "resourceFilename == CMakeLists.txt || resourceExtname == .cmake || resourceLangId == cmake"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "cmake-gui-editor.openVisual",
+          "group": "navigation@2",
+          "when": "resourceFilename == CMakeLists.txt || resourceExtname == .cmake || resourceLangId == cmake"
+        }
+      ]
+    }
+  },
+  "files": [
+    "dist/**",
+    "media/**",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.103.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
+    "eslint": "^9.34.0",
+    "typescript": "^5.9.2",
+    "ts-loader": "^9.5.4",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}
