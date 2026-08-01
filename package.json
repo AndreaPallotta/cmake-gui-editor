@@ -2,7 +2,7 @@
   "name": "cmake-gui-editor",
   "displayName": "CMake GUI Editor",
   "description": "A visual, lossless GUI editor for CMakeLists.txt and .cmake files. Edit project metadata, target dependencies, and include directories without touching raw CMake syntax.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Andrea Pallotta",
     "url": "https://github.com/AndreaPallotta"
