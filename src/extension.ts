@@ -39,6 +39,38 @@ export function activate(ctx: vscode.ExtensionContext) {
 			}
 		})
 	);
+
+	// Bug 2 fix: implement the insertManagedRegion command that was declared but
+	// never registered. Stamps a cmake-builder:begin/end comment block at the
+	// active cursor position in a CMake text editor.
+	ctx.subscriptions.push(
+		vscode.commands.registerCommand('cmake-gui-editor.insertManagedRegion', async () => {
+			const editor = vscode.window.activeTextEditor;
+			if (!editor) {
+				vscode.window.showWarningMessage('CMake GUI: Open a CMake file in the text editor first.');
+				return;
+			}
+			const doc = editor.document;
+			const isCMakeFile =
+				doc.languageId === 'cmake' ||
+				path.basename(doc.fileName) === 'CMakeLists.txt' ||
+				doc.fileName.endsWith('.cmake');
+			if (!isCMakeFile) {
+				vscode.window.showWarningMessage('CMake GUI: This command is only available for CMake files.');
+				return;
+			}
+			const pos = editor.selection.active;
+			// Detect the indentation of the current line so we match the file's style.
+			const lineText = doc.lineAt(pos.line).text;
+			const indent = lineText.match(/^(\s*)/)?.[1] ?? '';
+			const snippet = new vscode.SnippetString(
+				`${indent}# === cmake-builder:begin ===\n` +
+				`${indent}\$0\n` +
+				`${indent}# === cmake-builder:end ===\n`
+			);
+			await editor.insertSnippet(snippet, pos.with(undefined, 0));
+		})
+	);
 }
 
 export function deactivate() { }
@@ -93,8 +125,12 @@ class CMakeGuiProvider implements vscode.CustomTextEditorProvider {
 			if (choice !== 'Apply') {
 				return;
 			}
+			// Bug 1 fix: use the correct end position (lineCount - 1, end of last line)
+			// instead of (lineCount, 0) which is one line past the document end.
+			const lastLine = document.lineCount - 1;
+			const lastChar = document.lineAt(lastLine).text.length;
 			const edit = new vscode.WorkspaceEdit();
-			edit.replace(document.uri, new vscode.Range(0, 0, document.lineCount, 0), updated);
+			edit.replace(document.uri, new vscode.Range(0, 0, lastLine, lastChar), updated);
 			await vscode.workspace.applyEdit(edit);
 		});
 	}
@@ -110,7 +146,9 @@ async function closeDiffForUris(left: vscode.Uri, right: vscode.Uri) {
 		for (const tab of group.tabs) {
 			const input: any = tab.input;
 			if (input && input.original && input.modified) {
-				if (String(input.original) === String(left) && String(input.modified) === String(right)) {
+				// Bug 9 fix: use .toString() for URI comparison instead of String()
+				// to ensure consistent results across URI object implementations.
+				if (input.original.toString() === left.toString() && input.modified.toString() === right.toString()) {
 					tabsToClose.push(tab);
 				}
 			}

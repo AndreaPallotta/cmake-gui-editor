@@ -1,55 +1,587 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; img-src ${cspSource} https: data:;
                  script-src ${cspSource}; style-src ${cspSource} 'unsafe-inline';">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CMake GUI (Visual)</title>
+  <title>CMake GUI Editor</title>
   <style>
-    body{font-family: var(--vscode-font-family); font-size: 13px; margin:0;}
-    header{display:flex; align-items:center; gap:.5rem; padding:.5rem .75rem; border-bottom:1px solid var(--vscode-editorGroup-border);}
-    main{display:grid; grid-template-columns: 280px 1fr 1fr; gap:12px; padding:12px;}
-    .card{border:1px solid var(--vscode-editorGroup-border); border-radius:6px; padding:8px;}
-    h3{margin:.2rem 0 .6rem 0; font-size: 12px; text-transform: uppercase; opacity:.7;}
-    input, textarea, select{width:100%;}
-    textarea{height:110px;}
-    #apply{margin-left:auto;}
-    code{white-space:pre;}
+    /* ─── Reset ─────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ─── Root ───────────────────────────────────────────────────────────── */
+    :root {
+      --radius: 5px;
+      --radius-sm: 3px;
+      --gap: 14px;
+      --transition: 0.15s ease;
+      --accent: #0891b2;
+      --accent-hover: #0e7490;
+      --accent-subtle: rgba(8, 145, 178, 0.12);
+      --warn: #f59e0b;
+      --warn-subtle: rgba(245, 158, 11, 0.12);
+      --danger: #ef4444;
+      --success: #22c55e;
+    }
+
+    body {
+      font-family: var(--vscode-font-family, -apple-system, sans-serif);
+      font-size: var(--vscode-font-size, 13px);
+      color: var(--vscode-foreground);
+      background: var(--vscode-editor-background);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ─── Scrollbar ──────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: var(--vscode-scrollbarSlider-background);
+      border-radius: 99px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--vscode-scrollbarSlider-hoverBackground); }
+
+    /* ─── Topbar ─────────────────────────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      height: 40px;
+      background: var(--vscode-titleBar-activeBackground, var(--vscode-sideBar-background, var(--vscode-editor-background)));
+      border-bottom: 1px solid var(--vscode-editorGroup-border);
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--vscode-titleBar-activeForeground, var(--vscode-foreground));
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+      flex-shrink: 0;
+    }
+
+    .brand svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .sep {
+      width: 1px;
+      height: 16px;
+      background: var(--vscode-editorGroup-border);
+      flex-shrink: 0;
+    }
+
+    /* Target selector group */
+    .target-group {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+
+    .target-label {
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+      white-space: nowrap;
+    }
+
+    .select-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .select-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 7px;
+      font-size: 10px;
+      color: var(--vscode-descriptionForeground);
+      pointer-events: none;
+    }
+
+    #targetSelect {
+      appearance: none;
+      background: var(--vscode-dropdown-background);
+      color: var(--vscode-dropdown-foreground);
+      border: 1px solid var(--vscode-dropdown-border, var(--vscode-editorGroup-border));
+      border-radius: var(--radius-sm);
+      padding: 3px 24px 3px 8px;
+      font-family: var(--vscode-font-family);
+      font-size: var(--vscode-font-size, 13px);
+      outline: none;
+      cursor: pointer;
+      min-width: 130px;
+      transition: border-color var(--transition);
+    }
+    #targetSelect:focus { border-color: var(--vscode-focusBorder); }
+
+    /* Kind badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transition: opacity var(--transition);
+    }
+    .badge-exe  { background: rgba(6, 182, 212, 0.18); color: #22d3ee; }
+    .badge-lib  { background: rgba(167, 139, 250, 0.18); color: #c4b5fd; }
+    .badge-none { opacity: 0; }
+
+    /* Spacer */
+    .flex-1 { flex: 1; }
+
+    /* Status message */
+    .status {
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+      transition: opacity 0.3s;
+      opacity: 0;
+      white-space: nowrap;
+    }
+    .status.visible { opacity: 1; }
+    .status.ok   { color: var(--success); }
+    .status.warn { color: var(--warn); }
+
+    /* Apply button */
+    #applyBtn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+      font-family: var(--vscode-font-family);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background var(--transition), box-shadow var(--transition), transform 0.1s;
+      flex-shrink: 0;
+    }
+    #applyBtn:hover { background: var(--vscode-button-hoverBackground); }
+    #applyBtn:active { transform: scale(0.97); }
+    #applyBtn.dirty {
+      box-shadow: 0 0 0 2px var(--warn);
+    }
+    #applyBtn .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--warn);
+      opacity: 0;
+      transition: opacity var(--transition);
+      flex-shrink: 0;
+    }
+    #applyBtn.dirty .dot { opacity: 1; }
+
+    /* ─── Layout ─────────────────────────────────────────────────────────── */
+    .workspace {
+      display: grid;
+      grid-template-columns: 250px 1fr 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--vscode-editorGroup-border);
+      overflow: hidden;
+    }
+    .panel:last-child { border-right: none; }
+
+    /* Panel header */
+    .panel-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 13px 7px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-descriptionForeground));
+      background: var(--vscode-sideBarSectionHeader-background, transparent);
+      border-bottom: 1px solid var(--vscode-editorGroup-border);
+      flex-shrink: 0;
+    }
+
+    .panel-head .icon {
+      font-size: 13px;
+      opacity: 0.8;
+    }
+
+    /* Panel scroll body */
+    .panel-body {
+      padding: 13px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap);
+    }
+
+    /* ─── Field ──────────────────────────────────────────────────────────── */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+
+    .field-label {
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--vscode-foreground);
+      opacity: 0.85;
+      letter-spacing: 0.01em;
+    }
+
+    .field-hint {
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--vscode-descriptionForeground);
+      opacity: 0.75;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      background: var(--vscode-input-background);
+      color: var(--vscode-input-foreground);
+      border: 1px solid var(--vscode-input-border, var(--vscode-editorGroup-border));
+      border-radius: var(--radius-sm);
+      padding: 5px 8px;
+      font-family: var(--vscode-font-family);
+      font-size: var(--vscode-font-size, 13px);
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .field input::placeholder,
+    .field textarea::placeholder { color: var(--vscode-input-placeholderForeground); }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--vscode-focusBorder);
+      box-shadow: 0 0 0 1px var(--vscode-focusBorder);
+    }
+
+    .field textarea {
+      resize: vertical;
+      min-height: 80px;
+      font-family: var(--vscode-editor-font-family, 'Consolas', 'Courier New', monospace);
+      font-size: calc(var(--vscode-editor-font-size, 12px) * 0.95);
+      line-height: 1.55;
+    }
+
+    /* Dirty field highlight */
+    .field.dirty input,
+    .field.dirty select,
+    .field.dirty textarea {
+      border-color: var(--warn);
+      box-shadow: 0 0 0 1px var(--warn-subtle);
+    }
+
+    /* Styled select */
+    .field select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 26px;
+      cursor: pointer;
+    }
+
+    /* ─── Sub-divider ────────────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: var(--vscode-editorGroup-border);
+      opacity: 0.5;
+      margin: 2px 0;
+    }
+
+    /* ─── Sources chips ──────────────────────────────────────────────────── */
+    .sources-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      min-height: 30px;
+      align-content: flex-start;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      background: var(--accent-subtle);
+      border: 1px solid rgba(8, 145, 178, 0.25);
+      border-radius: 10px;
+      font-size: 11px;
+      font-family: var(--vscode-editor-font-family, monospace);
+      color: var(--accent);
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      animation: chipIn 0.15s ease-out;
+    }
+    @keyframes chipIn {
+      from { opacity: 0; transform: scale(0.88) translateY(2px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .chip-ext {
+      opacity: 0.6;
+      font-size: 10px;
+    }
+
+    .empty-hint {
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+      opacity: 0.55;
+      font-style: italic;
+    }
+
+    /* ─── No-target state ────────────────────────────────────────────────── */
+    #noTargetState {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex: 1;
+      color: var(--vscode-descriptionForeground);
+      opacity: 0.6;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #noTargetState .nt-icon {
+      font-size: 32px;
+      opacity: 0.5;
+    }
+
+    #noTargetState p { font-size: 12px; line-height: 1.5; }
+
+    /* ─── Unparsed panel ─────────────────────────────────────────────────── */
+    .code-box {
+      background: var(--vscode-textBlockQuote-background, color-mix(in srgb, var(--vscode-editor-background) 80%, var(--vscode-editor-foreground) 5%));
+      border: 1px solid var(--vscode-editorGroup-border);
+      border-radius: var(--radius-sm);
+      padding: 9px 11px;
+      flex: 1;
+      overflow: auto;
+    }
+
+    .code-box code {
+      font-family: var(--vscode-editor-font-family, 'Consolas', 'Courier New', monospace);
+      font-size: calc(var(--vscode-editor-font-size, 12px) * 0.92);
+      white-space: pre;
+      line-height: 1.55;
+      color: var(--vscode-editor-foreground);
+    }
+
+    .panel-hint {
+      font-size: 10px;
+      color: var(--vscode-descriptionForeground);
+      opacity: 0.7;
+      line-height: 1.5;
+      flex-shrink: 0;
+    }
+
+    /* ─── Inline count pill ──────────────────────────────────────────────── */
+    .count-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 16px;
+      padding: 0 5px;
+      background: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 700;
+      vertical-align: middle;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <strong>CMake GUI (Visual)</strong>
-    <select id="targetSelect"></select>
-    <button id="apply">Apply</button>
-  </header>
-  <main>
-    <section class="card">
-      <h3>Project</h3>
-      <label>Name <input id="projName" placeholder="MyProject"/></label><br/>
-      <label>min CMake <input id="minCMake" placeholder="3.21"/></label><br/>
-      <label>C++ Standard
-        <select id="cxxStd">
-          <option>11</option><option>14</option><option>17</option><option>20</option><option>23</option>
-        </select>
-      </label>
-    </section>
 
-    <section class="card">
-      <h3>Target Dependencies</h3>
-      <label>Target <span id="targetName"></span></label><br/>
-      <label>Libraries (one per line)
-        <textarea id="linkLibs" placeholder="Qt6::Widgets&#10;fmt::fmt"></textarea>
-      </label>
-    </section>
+  <!-- ── Topbar ──────────────────────────────────────────────────────────── -->
+  <div class="topbar">
+    <div class="brand">
+      <!-- Inline logo: gear + panel -->
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="20" height="20" rx="4" fill="#0891b2"/>
+        <!-- gear teeth -->
+        <circle cx="10" cy="10" r="3" fill="white" opacity="0.15"/>
+        <circle cx="10" cy="10" r="1.8" fill="white"/>
+        <path d="M10 6.5v1M10 12.5v1M6.5 10h1M12.5 10h1
+                 M7.6 7.6l.7.7M11.7 11.7l.7.7
+                 M7.6 12.4l.7-.7M11.7 8.3l.7-.7"
+              stroke="white" stroke-width="1.1" stroke-linecap="round"/>
+        <!-- panel overlay in bottom-right -->
+        <rect x="11" y="11" width="8" height="8" rx="2" fill="#0e7490"/>
+        <path d="M12.5 13.5h5M12.5 15.5h3.5" stroke="white" stroke-width="0.9" stroke-linecap="round"/>
+      </svg>
+      CMake GUI Editor
+    </div>
 
-    <section class="card">
-      <h3>Unsupported / Unparsed (read-only)</h3>
-      <pre><code id="unsupported"></code></pre>
-    </section>
-  </main>
+    <div class="sep"></div>
+
+    <div class="target-group">
+      <span class="target-label">Target</span>
+      <div class="select-wrap">
+        <select id="targetSelect" title="Select active target"></select>
+      </div>
+      <span class="badge badge-none" id="kindBadge"></span>
+    </div>
+
+    <div class="flex-1"></div>
+    <span class="status" id="statusMsg"></span>
+    <button id="applyBtn" title="Preview and apply changes (shows a diff first)">
+      <div class="dot"></div>
+      Apply Changes
+    </button>
+  </div>
+
+  <!-- ── Workspace ───────────────────────────────────────────────────────── -->
+  <div class="workspace">
+
+    <!-- Left panel: Project metadata -->
+    <div class="panel" id="projectPanel">
+      <div class="panel-head">
+        <span class="icon">⚙</span> Project
+      </div>
+      <div class="panel-body">
+
+        <div class="field" id="fProjName">
+          <div class="field-label">Project Name</div>
+          <input id="projName" type="text" placeholder="MyProject" autocomplete="off" spellcheck="false" />
+        </div>
+
+        <div class="field" id="fMinCMake">
+          <div class="field-label">Minimum CMake Version</div>
+          <input id="minCMake" type="text" placeholder="3.21" autocomplete="off" spellcheck="false" />
+        </div>
+
+        <div class="field" id="fCxxStd">
+          <div class="field-label">C++ Standard</div>
+          <select id="cxxStd">
+            <option value="">— unchanged —</option>
+            <option value="11">C++11</option>
+            <option value="14">C++14</option>
+            <option value="17">C++17</option>
+            <option value="20">C++20</option>
+            <option value="23">C++23</option>
+          </select>
+          <span class="field-hint">Sets CMAKE_CXX_STANDARD. If inserting new, also adds CMAKE_CXX_STANDARD_REQUIRED ON.</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Center panel: Target details -->
+    <div class="panel" id="targetPanel">
+      <div class="panel-head">
+        <span class="icon">◈</span> Target
+      </div>
+      <div class="panel-body" id="targetBody">
+
+        <!-- Empty state -->
+        <div id="noTargetState">
+          <div class="nt-icon">◈</div>
+          <p>No targets detected.<br/>Add an <code>add_executable</code> or <code>add_library</code> call to your file.</p>
+        </div>
+
+        <!-- Target fields (hidden until a target is available) -->
+        <div id="targetFields" style="display:none; flex-direction:column; gap:var(--gap);">
+
+          <div class="field">
+            <div class="field-label">
+              Source Files
+              <span class="field-hint">· read-only</span>
+              <span class="count-pill" id="srcCount">0</span>
+            </div>
+            <div class="sources-wrap" id="sourcesList">
+              <span class="empty-hint">No sources detected</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="field" id="fLinkLibs">
+            <div class="field-label">
+              Link Libraries
+              <span class="field-hint">· one per line</span>
+            </div>
+            <textarea id="linkLibs"
+              placeholder="Qt6::Widgets&#10;fmt::fmt&#10;Threads::Threads"
+              spellcheck="false"></textarea>
+            <span class="field-hint">
+              Writes / replaces <code>target_link_libraries(&lt;target&gt; PRIVATE …)</code>.
+            </span>
+          </div>
+
+          <div class="field" id="fIncludeDirs">
+            <div class="field-label">
+              Include Directories
+              <span class="field-hint">· one per line</span>
+            </div>
+            <textarea id="includeDirs"
+              placeholder="${CMAKE_CURRENT_SOURCE_DIR}/include&#10;${CMAKE_CURRENT_BINARY_DIR}"
+              spellcheck="false"></textarea>
+            <span class="field-hint">
+              Writes / replaces <code>target_include_directories(&lt;target&gt; PRIVATE …)</code>.
+            </span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Right panel: Unparsed content -->
+    <div class="panel" id="rawPanel">
+      <div class="panel-head">
+        <span class="icon">≡</span> Unparsed Content
+      </div>
+      <div class="panel-body">
+        <p class="panel-hint">
+          CMake that the GUI doesn't model — preserved byte-for-byte when you apply changes.
+          Comments and blank lines are hidden.
+        </p>
+        <div class="code-box">
+          <code id="unsupportedCode"></code>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .workspace -->
+
   <script src="${appJs}"></script>
 </body>
 </html>

@@ -9,8 +9,10 @@ export interface TargetModel {
   kind: TargetKind;
   sources: string[];
   linkLibs: string[];
+  includeDirs: string[];
   addRange?: [number, number];
-  tllRange?: [number, number];
+  tllRange?: [number, number];  // first target_link_libraries range (kept for insert-after fallback)
+  tidRange?: [number, number];  // target_include_directories range
 }
 
 export interface CMakeModel {
@@ -27,6 +29,7 @@ export interface ApplyInput {
   cxxStandard?: string;
   targetName: string;
   linkLibs: string[];
+  includeDirs: string[];
 }
 
 export interface Parsed {

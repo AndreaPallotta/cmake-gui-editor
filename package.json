@@ -1,8 +1,8 @@
 {
   "name": "cmake-gui-editor",
-  "displayName": "cmake-gui-editor",
-  "description": "GUI-based editor for cmake and cmakelists files",
-  "version": "0.0.1",
+  "displayName": "CMake GUI Editor",
+  "description": "A visual, lossless GUI editor for CMakeLists.txt and .cmake files. Edit project metadata, target dependencies, and include directories without touching raw CMake syntax.",
+  "version": "1.0.0",
   "author": {
     "name": "Andrea Pallotta",
     "url": "https://github.com/AndreaPallotta"
@@ -12,21 +12,35 @@
     "url": "https://github.com/AndreaPallotta/cmake-gui-editor.git"
   },
   "publisher": "AndreaPallotta",
+  "icon": "media/icon.png",
+  "keywords": [
+    "cmake",
+    "gui",
+    "visual editor",
+    "CMakeLists",
+    "build system",
+    "c++",
+    "cpp"
+  ],
   "engines": {
     "vscode": "^1.103.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Programming Languages"
   ],
   "activationEvents": [
-    "onLanguage:cmake"
+    "onLanguage:cmake",
+    "workspaceContains:**/CMakeLists.txt",
+    "workspaceContains:**/*.cmake"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "cmake-gui-editor.openVisual",
-        "title": "CMake GUI: Open Visual Editor"
+        "title": "CMake GUI: Open Visual Editor",
+        "icon": "$(layout-panel)"
       },
       {
         "command": "cmake-gui-editor.insertManagedRegion",
@@ -67,6 +81,11 @@
         {
           "command": "cmake-gui-editor.openVisual",
           "group": "navigation@2",
+          "when": "resourceFilename == CMakeLists.txt || resourceExtname == .cmake || resourceLangId == cmake"
+        },
+        {
+          "command": "cmake-gui-editor.insertManagedRegion",
+          "group": "navigation@3",
           "when": "resourceFilename == CMakeLists.txt || resourceExtname == .cmake || resourceLangId == cmake"
         }
       ]

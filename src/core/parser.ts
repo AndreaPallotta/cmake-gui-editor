@@ -15,8 +15,10 @@ function parseAddTarget(name: string, args: string): { tname?: string; kind: Tar
         if (l === tname) {
             continue;
         }
-        if (/^(STATIC|SHARED|INTERFACE)$/i.test(l)) {
-            kind = 'library';
+        if (/^(STATIC|SHARED|MODULE|OBJECT|INTERFACE|EXCLUDE_FROM_ALL|ALIAS)$/i.test(l)) {
+            if (/^(STATIC|SHARED|MODULE|OBJECT)$/i.test(l)) {
+                kind = 'library';
+            }
             continue;
         }
         cleaned.push(l);
@@ -29,6 +31,13 @@ function parseTll(args: string): { target?: string; libs: string[] } {
     const target = list[0];
     const libs = list.slice(1).filter(x => !/^(PRIVATE|PUBLIC|INTERFACE)$/i.test(x));
     return { target, libs };
+}
+
+function parseTid(args: string): { target?: string; dirs: string[] } {
+    const list = splitArgsLines(args);
+    const target = list[0];
+    const dirs = list.slice(1).filter(x => !/^(PRIVATE|PUBLIC|INTERFACE|BEFORE|AFTER|SYSTEM)$/i.test(x));
+    return { target, dirs };
 }
 
 export function parseCMake(text: string): Parsed {
@@ -65,7 +74,7 @@ export function parseCMake(text: string): Parsed {
         if (n === 'add_executable' || n === 'add_library') {
             const t = parseAddTarget(n, seg.argsText);
             if (t.tname) {
-                const tgt = targetsByName.get(t.tname) || { name: t.tname, kind: t.kind, sources: [], linkLibs: [] };
+                const tgt = targetsByName.get(t.tname) || { name: t.tname, kind: t.kind, sources: [], linkLibs: [], includeDirs: [] };
                 tgt.kind = t.kind;
                 tgt.sources = t.sources;
                 tgt.addRange = [seg.start, seg.end];
@@ -76,10 +85,38 @@ export function parseCMake(text: string): Parsed {
         if (n === 'target_link_libraries') {
             const tll = parseTll(seg.argsText);
             if (tll.target) {
-                const tgt = targetsByName.get(tll.target) || { name: tll.target, kind: 'executable', sources: [], linkLibs: [] };
-                tgt.linkLibs = tll.libs;
-                tgt.tllRange = [seg.start, seg.end];
+                const tgt = targetsByName.get(tll.target) || { name: tll.target, kind: 'executable', sources: [], linkLibs: [], includeDirs: [] };
+                // Keep the first occurrence's range as the canonical insert-after point.
+                if (!tgt.tllRange) {
+                    tgt.linkLibs = tll.libs;
+                    tgt.tllRange = [seg.start, seg.end];
+                } else {
+                    // Merge libs from subsequent blocks so the UI shows the full picture.
+                    for (const lib of tll.libs) {
+                        if (!tgt.linkLibs.includes(lib)) {
+                            tgt.linkLibs.push(lib);
+                        }
+                    }
+                }
                 targetsByName.set(tll.target, tgt);
+            }
+            continue;
+        }
+        if (n === 'target_include_directories') {
+            const tid = parseTid(seg.argsText);
+            if (tid.target) {
+                const tgt = targetsByName.get(tid.target) || { name: tid.target, kind: 'executable', sources: [], linkLibs: [], includeDirs: [] };
+                if (!tgt.tidRange) {
+                    tgt.includeDirs = tid.dirs;
+                    tgt.tidRange = [seg.start, seg.end];
+                } else {
+                    for (const dir of tid.dirs) {
+                        if (!tgt.includeDirs.includes(dir)) {
+                            tgt.includeDirs.push(dir);
+                        }
+                    }
+                }
+                targetsByName.set(tid.target, tgt);
             }
             continue;
         }
